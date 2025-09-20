@@ -1,11 +1,22 @@
 const Produto = require("../src/produto/Produto");
 
 describe("Produto", () => {
+  let p;
+
+  // Cria o objeto produto antes de cada caso de teste
+  beforeEach(() => {
+    p = new Produto("Camisa", "Camisa azul", 79.9, 10);
+  });
+
+  afterEach(() => {
+    p = null;
+    console.log("O produto está " + p);
+    // Interessante quando usar mocks
+  });
+
 
   // Criar produto
   it("deve deve ser criado com os atributos corretos", () => {
-    const p = new Produto("Camisa", "Camisa azul", 79.9, 10);
-
     expect(p.nome).toBe("Camisa");
     expect(p.descricao).toBe("Camisa azul");
     expect(p.preco).toBe(79.9);
@@ -53,11 +64,8 @@ describe("Produto", () => {
 
   // Aumento de estoque válido
   it("deve aumentar o estoque corretamente", () => {
-    const p = new Produto("Calça", "Calça jeans", 129.9, 5);
-
     p.aumentarEstoque(3);
-
-    expect(p.estoque).toBe(8);
+    expect(p.estoque).toBe(13);
   });
 
   // Aumento de estoque é inválido: o valor não é um número inteiro
@@ -77,11 +85,8 @@ describe("Produto", () => {
 
   // Diminuição de estoque válido
   it("deve diminuir o estoque corretamente", () => {
-    const p = new Produto("Calça", "Calça jeans", 129.9, 5);
-
     p.diminuirEstoque(3);
-
-    expect(p.estoque).toBe(2);
+    expect(p.estoque).toBe(7);
   });
 
   // Diminuição de estoque é inválido: o valor não é um número inteiro
@@ -103,5 +108,35 @@ describe("Produto", () => {
     const p = new Produto("Calça", "Calça jeans", 129.9, 5)
     expect(() => p.diminuirEstoque(6))
       .toThrow("Estoque insuficiente");
+  });
+});
+
+describe("A lista de produtos", () => {
+  let produtos;
+
+  beforeAll(() => {
+    produtos = [
+      new Produto("Camisa", "Camisa azul", 79.9, 10),
+      new Produto("Calça", "Calça jeans", 129.9, 5),
+      new Produto("Tênis", "Tênis esportivo", 249.9, 7),
+    ];
+  });
+ 
+  afterAll(() => {
+    produtos = null
+    console.log("A lista de produtos está " + produtos);
+  });
+
+  it("deve ter 3 produtos na lista inicial", () => {
+    expect(produtos.length).toBe(3);
+  });
+
+  it("deve ter Camisa como primeiro elemento", () => {
+    expect(produtos[0].nome).toBe("Camisa");
+  });
+
+  it("deve conter um produto chamado Tênis", () => {
+    const nomes = produtos.map(p => p.nome);
+    expect(nomes).toContain("Tênis");
   });
 });
