@@ -1,49 +1,67 @@
 const { defineFeature, loadFeature } = require("jest-cucumber");
 const path = require("path");
-const Carrinho = require("../../backend/src/carrinho/Carrinho");
-const Produto = require("../../backend/src/produto/Produto");
+const puppeteer = require("puppeteer");
 
 const feature = loadFeature(path.join(__dirname, "../features/carrinho.feature"));
 
 defineFeature( feature, (test)=>{
-    let carrinho, camisa, tenis, frete, mensagem, total;
+    let browser, page;
 
-    beforeEach(()=>{
-        carrinho = new Carrinho();
-        camisa = new Produto("Camisa", "Camisa azul", 50, 10);
-        tenis = new Produto("Tênis", "Tênis esportivo", 200, 5);
+    const filePath = 'http://127.0.0.1:5501/frontend/index.html';
+
+    beforeAll(async()=>{
+        browser = await puppeteer.launch({
+            headless: true, 
+            // slowMo: 30,
+        });
+        page = await browser.newPage();
+        await page.goto(filePath);
+    });
+
+    afterAll(async()=>{
+        await browser.close();
     });
 
     test("Compra bem-sucedida", ({given, and, when, then})=>{
-        given("que o usuário acessou a página do carrinho", ()=>{
-            expect(carrinho).toBeDefined();
+        given("que o usuário acessou a página do carrinho", async ()=>{
+            const titulo = await page.title();
+            expect(titulo).toBe("Carrinho de Compras");
         });
 
-        and("adicionou 2 camisas e 1 tênis ao carrinho", ()=>{
-            carrinho.adicionar(camisa, 2);
-            carrinho.adicionar(tenis, 1);
-            expect(carrinho.itens.length).toBe(2);
+        and("adicionou 2 camisas e 1 tênis ao carrinho", async ()=>{
+            await page.$eval("#qtd-camisa", el => el.value = "2");
+            await page.click("#btn-add-camisa");
+
+            await page.$eval("#qtd-tenis", el => el.value = "1");
+            await page.click("#btn-add-tenis");
         });
 
         when(/^ele informa o CEP "(.*)"$/, async (cep)=>{
-            frete = await carrinho.calcularFrete(cep);
+            await page.$eval("#cep" , (el, value)=> el.value = value, cep);
         });
 
-        and('clica em "Calcular Frete"', ()=>{
-            expect(frete).toBe(25);
+        and('clica em "Calcular Frete"', async ()=>{
+            await page.click("#btn-frete");
+
+            await page.waitForFunction(()=>{
+                const total = document.querySelector("#total");
+                return total && parseFloat(total.textContent) > 0;
+            });
         });
 
-        and('clica em "Comprar"', ()=>{
-            mensagem = "Compra realizada com sucesso!"
+        and('clica em "Comprar"', async ()=>{
+            await page.click("#btn-comprar");
         });
 
-        then(/^o sistema deve exibir a mensagem "(.*)"$/, (mensagemEsperada)=>{
-            expect(mensagem).toBe(mensagemEsperada);
+        then(/^o sistema deve exibir a mensagem "(.*)"$/, async (mensagemEsperada)=>{
+            await page.waitForSelector("#mensagem-compra", {visible:true});
         });
 
-        and(/^o total deve ser R\$ "(.*)"$/, (valorEsperado)=>{
-            total = carrinho.total();
-            expect(total).toBe(Number(valorEsperado));
+        and(/^o total deve ser R\$ "(.*)"$/, async (valorEsperado)=>{
+            const total = await page.$eval("#total", el => parseFloat(el.textContent));
+            expect(total.toFixed(2)).toBe(valorEsperado);
+
+            // await new Promise(r => setTimeout(r, 3000));
         });
     });
 });
